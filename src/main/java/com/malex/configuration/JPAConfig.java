@@ -13,10 +13,14 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
+import java.util.Properties;
 
+//данный класс является Spring конфигурацией;
 @Configuration
+//включает TransactionManager для управления транзакциями БД;
 @EnableTransactionManagement
-@EnableJpaRepositories(basePackages = "com.malex.repository")
+// включаем возможность использования JPARepository и говорим, где их искать
+@EnableJpaRepositories(basePackages = "com.malex")
 public class JPAConfig {
 
     @Value("${data.username}")
@@ -33,13 +37,21 @@ public class JPAConfig {
     private boolean generateDdl;
     @Value("${data.database}")
     private String database;
+    @Value("${data.entitymanager.packages.to.scan}")
+    private String entityManagerPackages;
+    @Value("${data.hibernate.hbm2ddl}")
+    private String hibernateHbm2ddl;
 
     @Bean
     public DataSource dataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        // register Driver: org.postgresql.Driver
         dataSource.setDriverClassName(driver);
+        // register Url: jdbc:postgresql://localhost:5432/db_store_test
         dataSource.setUrl(url);
+        // register username: postgres
         dataSource.setUsername(username);
+        // register password: 2687484a
         dataSource.setPassword(password);
         return dataSource;
     }
@@ -53,17 +65,33 @@ public class JPAConfig {
         return jpaVendorAdapter;
     }
 
+    //TODO 1: "db.hibernate.hbm2ddl.auto"
+    @Bean
+    public Properties jpaProperties(){
+        Properties jpaProperties = new Properties();
+        //TODO 2: "db.hibernate.hbm2ddl.auto"
+        jpaProperties.put("hibernate.hbm2ddl.auto", hibernateHbm2ddl);
+        return jpaProperties;
+    }
+
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
         LocalContainerEntityManagerFactoryBean entityManagerFactory = new LocalContainerEntityManagerFactoryBean();
+        // register  DataSource
         entityManagerFactory.setDataSource(dataSource());
+        // register JpaVendorAdapter
         entityManagerFactory.setJpaVendorAdapter(jpaVendorAdapter());
-        entityManagerFactory.setPackagesToScan("com.malex.model");
+        // register  Packages To Scan Entity
+        entityManagerFactory.setPackagesToScan(entityManagerPackages);
+        //TODO 3: Implements PROP_HIBERNATE_HBM2DDL_AUTO = "db.hibernate.hbm2ddl.auto"
+        entityManagerFactory.setJpaProperties(jpaProperties());
         return entityManagerFactory;
     }
 
     @Bean
     public JpaTransactionManager transactionManager() {
+        JpaTransactionManager transactionManager = new JpaTransactionManager();
+        transactionManager.setEntityManagerFactory(entityManagerFactory().getObject());
         return new JpaTransactionManager();
     }
 }
